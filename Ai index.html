@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velocity Motors USA - Enterprise Ledger</title>
+    <!-- Tailwind CSS with Dark Mode Config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        sidebar: '#0f172a', /* slate-900 */
+                        brandLight: '#e0e7ff',
+                        brandDark: '#1e3a8a',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Sidebar Nav Item Styling */
+        .nav-item { transition: all 0.2s ease-in-out; }
+        .nav-item.active {
+            background-color: rgba(255,255,255,0.1);
+            border-left: 4px solid #3b82f6;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        /* Table styling */
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        .data-table th, .data-table td {
+            padding: 1rem;
+            text-align: right;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        .dark .data-table th, .dark .data-table td { border-bottom: 1px solid #334155; }
+        .data-table th:first-child, .data-table td:first-child { text-align: left; }
+        
+        .data-table thead th {
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #64748b;
+            background-color: #f8fafc;
+        }
+        .dark .data-table thead th {
+            color: #94a3b8;
+            background-color: #1e293b;
+        }
+        .data-table tbody tr:hover:not(:last-child) { background-color: #f1f5f9; }
+        .dark .data-table tbody tr:hover:not(:last-child) { background-color: #334155; }
+        
+        /* Grand Total Row */
+        .data-table tbody tr:last-child {
+            font-weight: 700;
+            background-color: #f8fafc;
+            border-top: 2px solid #cbd5e1;
+        }
+        .dark .data-table tbody tr:last-child {
+            background-color: #0f172a;
+            border-top: 2px solid #475569;
+        }
+
+        /* Chart container fluid dimensions */
+        .chart-container { position: relative; width: 100%; }
+    </style>
+</head>
+<body class="bg-gray-50 text-slate-800 dark:bg-slate-900 dark:text-slate-200 h-screen flex overflow-hidden">
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden lg:hidden transition-opacity" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 transform -translate-x-full lg:translate-x-0 w-64 bg-sidebar text-slate-300 shadow-2xl lg:shadow-none z-30 transition-transform duration-300 flex flex-col">
+        <div class="h-16 sm:h-20 flex items-center px-6 border-b border-slate-800">
+            <div class="bg-blue-600 text-white p-2 rounded-lg mr-3 shadow-sm">
+                <i class="fa-solid fa-car-side text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-white tracking-wide uppercase text-sm leading-tight">Velocity Motors</h1>
+                <p class="text-[10px] sm:text-xs text-slate-400">USA Enterprise</p>
+            </div>
+            <!-- Mobile Close Sidebar Button -->
+            <button onclick="toggleSidebar()" class="lg:hidden ml-auto text-slate-400 hover:text-white focus:outline-none">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        
+        <div class="p-4 flex-1 overflow-y-auto">
+            <p class="text-[10px] sm:text-xs text-slate-500 uppercase font-semibold mb-3 ml-2 tracking-wider">Analytics Modules</p>
+            <nav class="space-y-1.5">
+                <a href="#" onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active flex items-center px-4 py-2.5 sm:py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-chart-pie w-6 text-center"></i>
+                    <span class="font-medium text-sm ml-1">Overview Dashboard</span>
+                </a>
+                <a href="#" onclick="switchTab('products')" id="nav-products" class="nav-item flex items-center px-4 py-2.5 sm:py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-box w-6 text-center"></i>
+                    <span class="font-medium text-sm ml-1">Product Performance</span>
+                </a>
+                <a href="#" onclick="switchTab('markets')" id="nav-markets" class="nav-item flex items-center px-4 py-2.5 sm:py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-globe w-6 text-center"></i>
+                    <span class="font-medium text-sm ml-1">Market Revenue</span>
+                </a>
+                <a href="#" onclick="switchTab('reports')" id="nav-reports" class="nav-item flex items-center px-4 py-2.5 sm:py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-file-invoice w-6 text-center"></i>
+                    <span class="font-medium text-sm ml-1">Channels & Reports</span>
+                </a>
+            </nav>
+        </div>
+        
+        <div class="p-4 border-t border-slate-800 bg-slate-900/50">
+            <div class="flex items-center text-xs text-slate-400">
+                <span class="h-2 w-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
+                Synced with Ledger
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col h-screen overflow-hidden relative w-full">
+        
+        <!-- Header -->
+        <header class="h-16 sm:h-20 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between px-3 sm:px-6 z-10 transition-colors duration-300">
+            
+            <div class="flex items-center flex-1 min-w-0 pr-2">
+                <!-- Hamburger Menu -->
+                <button onclick="toggleSidebar()" class="lg:hidden text-slate-500 hover:text-slate-800 dark:hover:text-white focus:outline-none mr-3 sm:mr-4 flex-shrink-0">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <div class="truncate">
+                    <h2 class="text-sm sm:text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2 truncate">
+                        <span class="truncate">Enterprise Ledger</span>
+                        <span id="year-badge" class="hidden lg:inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-[10px] sm:text-xs rounded-full font-medium whitespace-nowrap border border-blue-200 dark:border-blue-800">Year: 2026 (Ledger Source)</span>
+                    </h2>
+                    <p class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 hidden sm:block mt-0.5 sm:mt-1 truncate">Analyzing product category transactions and distributions.</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+                <!-- Compact Data Toggle for responsiveness -->
+                <div class="flex bg-slate-100 dark:bg-slate-900 rounded-lg p-1 border border-slate-200 dark:border-slate-700">
+                    <button id="btn-2023" onclick="setYear(2023)" class="px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium rounded-md text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">2023</button>
+                    <button id="btn-2026" onclick="setYear(2026)" class="px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium rounded-md bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white transition-colors">2026</button>
+                </div>
+                
+                <!-- Dark Mode Toggle -->
+                <button onclick="toggleTheme()" class="p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex-shrink-0">
+                    <i id="theme-icon" class="fa-solid fa-moon text-sm sm:text-base"></i>
+                </button>
+
+                <!-- Export Button -->
+                <button onclick="exportData()" class="hidden md:flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs sm:text-sm font-semibold rounded-lg hover:bg-slate-800 dark:hover:bg-gray-100 transition-colors shadow-sm flex-shrink-0">
+                    <i class="fa-solid fa-download mr-2"></i> Export Data
+                </button>
+                <!-- Mobile Export Icon -->
+                <button onclick="exportData()" class="md:hidden p-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm flex-shrink-0">
+                    <i class="fa-solid fa-download text-sm"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Scrollable Area -->
+        <main class="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
+            
+            <!-- Dashboard Tab -->
+            <div id="tab-dashboard" class="tab-content block space-y-4 sm:space-y-6">
+                
+                <!-- Info Banner -->
+                <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-3 sm:p-4 flex items-start transition-colors" id="info-banner">
+                    <i class="fa-solid fa-sparkles text-amber-500 mt-0.5 sm:mt-1 mr-3 text-sm sm:text-base"></i>
+                    <div>
+                        <h4 id="banner-title" class="text-xs sm:text-sm font-bold text-amber-800 dark:text-amber-400 leading-tight">Active Mode: 2026 Sales Ledger</h4>
+                        <p id="banner-desc" class="text-[10px] sm:text-xs text-amber-700 dark:text-amber-300/80 mt-1 leading-relaxed">Currently showing the verified 2026 ledger configurations for Velocity Motors USA across all internal databases. Data is fully validated.</p>
+                    </div>
+                </div>
+
+                <!-- Responsive KPI Cards Stack/Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+                    <!-- Card 1 -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-5 transition-colors group hover:shadow-md">
+                        <div class="flex justify-between items-start mb-3 sm:mb-4">
+                            <h3 class="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Cumulative Store Sales</h3>
+                            <div class="p-1.5 sm:p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 transition-colors">
+                                <i class="fa-solid fa-dollar-sign"></i>
+                            </div>
+                        </div>
+                        <h2 id="kpi-sales" class="text-xl sm:text-2xl lg:text-3xl font-black text-slate-800 dark:text-white truncate">$12,198,150.00</h2>
+                        <div id="kpi-yoy" class="mt-1.5 sm:mt-2 text-[10px] sm:text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center">
+                            <i class="fa-solid fa-arrow-trend-up mr-1.5"></i> +14.2% YoY projected index
+                        </div>
+                    </div>
+                    <!-- Card 2 -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-5 transition-colors group hover:shadow-md">
+                        <div class="flex justify-between items-start mb-3 sm:mb-4">
+                            <h3 class="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Primary Fleet (CAR)</h3>
+                            <div class="p-1.5 sm:p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100 transition-colors">
+                                <i class="fa-solid fa-car"></i>
+                            </div>
+                        </div>
+                        <h2 id="kpi-car" class="text-xl sm:text-2xl lg:text-3xl font-black text-slate-800 dark:text-white truncate">$9,304,900.00</h2>
+                        <div class="mt-1.5 sm:mt-2 text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">
+                            Represents <span id="kpi-car-pct" class="text-indigo-600 dark:text-indigo-400 font-bold">76.3%</span> of total portfolio
+                        </div>
+                    </div>
+                    <!-- Card 3 -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-5 transition-colors flex flex-col justify-between group hover:shadow-md">
+                        <div>
+                            <div class="flex justify-between items-start mb-2 sm:mb-3">
+                                <h3 class="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Target Achievement</h3>
+                                <div class="p-1.5 sm:p-2 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 group-hover:bg-purple-100 transition-colors">
+                                    <i class="fa-solid fa-bullseye"></i>
+                                </div>
+                            </div>
+                            <h2 id="kpi-target" class="text-xl sm:text-2xl lg:text-3xl font-black text-slate-800 dark:text-white mb-2 sm:mb-3">92.9%</h2>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 sm:h-2.5">
+                            <div id="kpi-target-bar" class="bg-slate-800 dark:bg-blue-500 h-2 sm:h-2.5 rounded-full transition-all duration-1000 ease-out" style="width: 92.9%"></div>
+                        </div>
+                    </div>
+                    <!-- Card 4 -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-5 transition-colors group hover:shadow-md">
+                        <div class="flex justify-between items-start mb-3 sm:mb-4">
+                            <h3 class="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Primary Profit</h3>
+                            <div class="p-1.5 sm:p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100 transition-colors">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </div>
+                        </div>
+                        <h2 id="kpi-profit" class="text-xl sm:text-2xl lg:text-3xl font-black text-slate-800 dark:text-white truncate">$878,110.00</h2>
+                        <div class="mt-1.5 sm:mt-2 text-[10px] sm:text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            Yields: <span id="kpi-margin" class="font-bold">13.1% net margin</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Responsive Charts & Data Row -->
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+                    
+                    <!-- Table Section -->
+                    <div class="xl:col-span-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 flex flex-col w-full overflow-hidden">
+                        <div class="p-4 sm:p-5 border-b border-gray-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                            <div>
+                                <h3 class="text-base sm:text-lg font-bold text-slate-800 dark:text-white flex items-center">
+                                    <i class="fa-solid fa-database mr-2 text-blue-500"></i> Regional Overview Database
+                                </h3>
+                                <p class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">Interactive cross table compiled from store locations.</p>
+                            </div>
+                            <!-- Search / Filter dummy -->
+                            <div class="relative w-full md:w-auto">
+                                <i class="fa-solid fa-search absolute left-3 top-2 sm:top-2.5 text-slate-400 text-xs sm:text-sm"></i>
+                                <input type="text" placeholder="Filter country..." class="pl-8 pr-3 py-1.5 sm:py-2 w-full text-xs sm:text-sm bg-slate-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-colors">
+                            </div>
+                        </div>
+                        
+                        <!-- Table Wrapper with overflow-x-auto for Mobile swiping -->
+                        <div class="w-full overflow-x-auto">
+                            <table class="data-table min-w-[600px] w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Country</th>
+                                        <th>Accessories ($)</th>
+                                        <th>Car ($)</th>
+                                        <th>Clothing ($)</th>
+                                        <th>Total Sales ($)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboard-tbody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Pie Chart Section -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-5 flex flex-col w-full">
+                        <div class="mb-2 sm:mb-4">
+                            <h3 class="text-base sm:text-lg font-bold text-slate-800 dark:text-white flex items-center">
+                                <i class="fa-solid fa-chart-pie mr-2 text-purple-500"></i> Market Share
+                            </h3>
+                            <p class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">Contribution of each national market.</p>
+                        </div>
+                        <div class="chart-container h-56 sm:h-64 flex-1 w-full">
+                            <canvas id="marketSharePieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Tab -->
+            <div id="tab-products" class="tab-content hidden space-y-4 sm:space-y-6">
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-5 w-full">
+                    <h3 class="text-base sm:text-lg font-bold text-slate-800 dark:text-white mb-1 sm:mb-2">Product Performance Matrix</h3>
+                    <p class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mb-4 sm:mb-6">Revenue vs Profit evaluation across all enterprise product categories.</p>
+                    <div class="chart-container h-64 sm:h-80 w-full overflow-hidden">
+                        <!-- Wrapper to prevent canvas blowout on mobile -->
+                        <div class="w-full h-full relative min-w-[300px]">
+                            <canvas id="productPerformanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden w-full">
+                    <div class="p-4 sm:p-5 border-b border-gray-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                        <h3 class="text-sm sm:text-md font-bold text-slate-800 dark:text-white">Detailed Product Ledger</h3>
+                    </div>
+                    <div class="w-full overflow-x-auto">
+                        <table class="data-table min-w-[500px] w-full">
+                            <thead>
+                                <tr>
+                                    <th>Product Category</th>
+                                    <th>Total Revenue</th>
+                                    <th>Units Sold</th>
+                                    <th>Net Profit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Markets Tab -->
+            <div id="tab-markets" class="tab-content hidden space-y-4 sm:space-y-6">
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-5 w-full">
+                    <h3 class="text-base sm:text-lg font-bold text-slate-800 dark:text-white mb-1 sm:mb-2">Market Stratification</h3>
+                    <p class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mb-4 sm:mb-6">Categorical revenue breakdown segmented by geographical operation zones.</p>
+                    <div class="chart-container h-64 sm:h-80 w-full overflow-hidden">
+                        <div class="w-full h-full relative min-w-[300px]">
+                            <canvas id="marketStackedChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="tab-reports" class="tab-content hidden space-y-4 sm:space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+                    <!-- Export Widget -->
+                    <div class="bg-gradient-to-br from-blue-600 to-indigo-800 rounded-xl shadow-lg p-5 sm:p-6 text-white flex flex-col justify-center items-center text-center">
+                        <i class="fa-solid fa-file-csv text-4xl sm:text-5xl mb-3 sm:mb-4 opacity-80"></i>
+                        <h3 class="text-lg sm:text-xl font-bold mb-1 sm:mb-2">Raw Data Extraction</h3>
+                        <p class="text-[10px] sm:text-sm text-blue-100 mb-4 sm:mb-6 leading-relaxed">Download the complete localized standard deviation and verbatim ledger figures for external auditing.</p>
+                        <button onclick="exportData()" class="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-indigo-900 text-sm sm:text-base font-bold rounded-lg shadow hover:bg-gray-100 transition-transform transform hover:scale-105 w-full">
+                            Generate CSV Dump
+                        </button>
+                    </div>
+                    
+                    <!-- Chart -->
+                    <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-5 w-full overflow-hidden">
+                        <h3 class="text-base sm:text-lg font-bold text-slate-800 dark:text-white mb-1 sm:mb-2">Channel Target Achievement</h3>
+                        <p class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mb-4 sm:mb-6">Actual revenue versus modeled historic targets.</p>
+                        <div class="chart-container h-56 sm:h-64 w-full relative min-w-[300px]">
+                            <canvas id="reportsTargetChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Table -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden w-full">
+                    <div class="p-4 sm:p-5 border-b border-gray-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                        <h3 class="text-sm sm:text-md font-bold text-slate-800 dark:text-white">Channel Ledger</h3>
+                    </div>
+                    <div class="w-full overflow-x-auto">
+                        <table class="data-table min-w-[500px] w-full">
+                            <thead>
+                                <tr>
+                                    <th>Sales Channel / Report Type</th>
+                                    <th>Achieved Revenue</th>
+                                    <th>Modeled Target</th>
+                                    <th>Achievement Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reports-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // --- Data Setup ---
+        const formatCurrency = (val) => {
+            if(val === null || val === undefined) return '';
+            return '$' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+        const formatNumber = (val) => {
+            if(val === null || val === undefined) return '';
+            return val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
+        // 2026 Source Data
+        const data2026 = {
+            dashboard: [
+                { country: 'Australia', accessories: 312480.00, car: 1849500.00, clothing: 168420.00 },
+                { country: 'Canada', accessories: 256390.00, car: 1258760.00, clothing: 142890.00 },
+                { country: 'Germany', accessories: 421770.00, car: 2094450.00, clothing: 198640.00 },
+                { country: 'United Kingdom', accessories: 298540.00, car: 882730.00, clothing: 104350.00 },
+                { country: 'United States', accessories: 612850.00, car: 3219460.00, clothing: 376920.00 }
+            ],
+            dashboardTotals: { country: 'Grand Total', accessories: 1902030.00, car: 9304900.00, clothing: 991220.00 },
+            products: [
+                { category: 'Accessories', revenue: 804552.00, units: 215420.00, profit: 132780.00 },
+                { category: 'Bikes', revenue: 3837791.00, units: 958610.00, profit: 404260.00 },
+                { category: 'Clothing', revenue: 471136.00, units: 186930.00, profit: 98540.00 },
+                { category: 'Components', revenue: 1186420.00, units: 304850.00, profit: 176310.00 },
+                { category: 'Maintenance Kits', revenue: 386740.00, units: 128950.00, profit: 66220.00 }
+            ],
+            productsTotals: { category: 'Grand Total', revenue: 6686639.00, units: 1794760.00, profit: 878110.00 },
+            reports: [
+                { type: 'Online Store', revenue: 1856420.00, target: 1268400.00, achievement: 94.7 },
+                { type: 'Dealer Network', revenue: 2947780.00, target: 1986200.00, achievement: 92.8 },
+                { type: 'Retail Partner', revenue: 1325480.00, target: 884300.00, achievement: 91.9 },
+                { type: 'Corporate Sales', revenue: 782960.00, target: 612740.00, achievement: 96.2 },
+                { type: 'Service Reports', revenue: 382000.00, target: 254600.00, achievement: 89.6 }
+            ],
+            reportsTotals: { type: 'Grand Total', revenue: 7294640.00, target: 5006240.00, achievement: 92.9 },
+            kpis: {
+                totalSales: 12198150.00, carSales: 9304900.00, carPct: 76.3, targetPct: 92.9, profit: 878110.00, margin: 13.1, yoy: "+14.2% YoY projected index", yoyColor: "text-emerald-600 dark:text-emerald-400"
+            }
+        };
+
+        // 2023 Historic Data (Modeled)
+        const generate2023Data = (data2026) => {
+            const factor = 0.832;
+            const processArray = (arr, numKeys) => arr.map(item => {
+                const newItem = { ...item };
+                numKeys.forEach(key => newItem[key] = newItem[key] * factor);
+                return newItem;
+            });
+            return {
+                dashboard: processArray(data2026.dashboard, ['accessories', 'car', 'clothing']),
+                dashboardTotals: processArray([data2026.dashboardTotals], ['accessories', 'car', 'clothing'])[0],
+                products: processArray(data2026.products, ['revenue', 'units', 'profit']),
+                productsTotals: processArray([data2026.productsTotals], ['revenue', 'units', 'profit'])[0],
+                reports: processArray(data2026.reports, ['revenue', 'target']).map(r => ({...r, achievement: (r.revenue/r.target*100).toFixed(1)})),
+                reportsTotals: { ...processArray([data2026.reportsTotals], ['revenue', 'target'])[0], achievement: 91.5 },
+                kpis: {
+                    totalSales: 10148860.80, carSales: 7741676.80, carPct: 76.3, targetPct: 91.5, profit: 730587.52, margin: 13.1, yoy: "+9.8% YoY projected index", yoyColor: "text-emerald-600 dark:text-emerald-400"
+                }
+            };
+        };
+        const data2023 = generate2023Data(data2026);
+
+        // App State
+        let currentYear = 2026;
+        let activeData = data2026;
+        window.myCharts = {};
+
+        // --- Data Toggle Logic ---
+        function setYear(year) {
+            if (currentYear === year) return;
+            currentYear = year;
+            activeData = year === 2026 ? data2026 : data2023;
+
+            // UI Buttons (Mobile responsive classes added here too)
+            const btn2026 = document.getElementById('btn-2026');
+            const btn2023 = document.getElementById('btn-2023');
+            const activeClassList = "px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium rounded-md bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white transition-colors".split(" ");
+            const inactiveClassList = "px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium rounded-md text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors".split(" ");
+            
+            if (year === 2026) {
+                btn2026.className = activeClassList.join(" ");
+                btn2023.className = inactiveClassList.join(" ");
+                document.getElementById('year-badge').innerText = "Year: 2026 (Ledger Source)";
+                document.getElementById('banner-title').innerText = "Active Mode: 2026 Sales Ledger";
+                document.getElementById('banner-desc').innerText = "Currently showing the verified 2026 ledger configurations for Velocity Motors USA across all internal databases. Data is fully validated.";
+            } else {
+                btn2023.className = activeClassList.join(" ");
+                btn2026.className = inactiveClassList.join(" ");
+                document.getElementById('year-badge').innerText = "Year: 2023 (Historic)";
+                document.getElementById('banner-title').innerText = "Active Historical Mode: 2023 Sales Ledger";
+                document.getElementById('banner-desc').innerText = "Currently showing modeled historic 2023 ledger adjustments for Velocity Motors USA (modeled at exactly 83.2% performance from the 2026 benchmark).";
+            }
+
+            // KPIs
+            document.getElementById('kpi-sales').innerText = formatCurrency(activeData.kpis.totalSales);
+            document.getElementById('kpi-yoy').innerHTML = `<i class="fa-solid fa-arrow-trend-up mr-1.5"></i> ${activeData.kpis.yoy}`;
+            document.getElementById('kpi-car').innerText = formatCurrency(activeData.kpis.carSales);
+            document.getElementById('kpi-car-pct').innerText = `${activeData.kpis.carPct}%`;
+            document.getElementById('kpi-target').innerText = `${activeData.kpis.targetPct}%`;
+            document.getElementById('kpi-target-bar').style.width = `${activeData.kpis.targetPct}%`;
+            document.getElementById('kpi-profit').innerText = formatCurrency(activeData.kpis.profit);
+            document.getElementById('kpi-margin').innerText = `${activeData.kpis.margin}% net margin`;
+
+            // Re-render
+            populateTables();
+            updateChartsData();
+        }
+
+        // --- Theme Toggle Logic ---
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+                localStorage.setItem('theme', 'light');
+                updateChartColors(false);
+            } else {
+                html.classList.add('dark');
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+                localStorage.setItem('theme', 'dark');
+                updateChartColors(true);
+            }
+        }
+
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            document.getElementById('theme-icon').classList.replace('fa-moon', 'fa-sun');
+        }
+
+        function getChartColors(isDark) {
+            return { text: isDark ? '#94a3b8' : '#64748b', grid: isDark ? '#334155' : '#e2e8f0' };
+        }
+
+        function updateChartColors(isDark) {
+            const colors = getChartColors(isDark);
+            Chart.defaults.color = colors.text;
+            
+            Object.values(window.myCharts).forEach(chart => {
+                if (chart.options.scales) {
+                    if (chart.options.scales.x) {
+                        chart.options.scales.x.grid.color = colors.grid;
+                        chart.options.scales.x.ticks.color = colors.text;
+                    }
+                    if (chart.options.scales.y) {
+                        chart.options.scales.y.grid.color = colors.grid;
+                        chart.options.scales.y.ticks.color = colors.text;
+                    }
+                }
+                chart.update();
+            });
+        }
+
+        // --- Mobile Sidebar Toggle ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+            overlay.classList.toggle('opacity-0');
+        }
+
+        // --- Tab Navigation ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => { el.classList.add('hidden'); el.classList.remove('block'); });
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabId}`).classList.add('block');
+            document.getElementById(`nav-${tabId}`).classList.add('active');
+            
+            // Close mobile sidebar if open
+            if(window.innerWidth < 1024 && !document.getElementById('sidebar').classList.contains('-translate-x-full')){
+                toggleSidebar();
+            }
+
+            // Lazy render
+            if(tabId === 'products' && !window.myCharts.products) renderProductsCharts();
+            if(tabId === 'markets' && !window.myCharts.markets) renderMarketsCharts();
+            if(tabId === 'reports' && !window.myCharts.reports) renderReportsCharts();
+        }
+
+        // --- Data Export Logic ---
+        function exportData() {
+            let csv = `VELOCITY MOTORS USA - ENTERPRISE DATA DUMP (${currentYear})\n\n`;
+            
+            csv += "--- REGIONAL SALES OVERVIEW ---\nCountry,Accessories,Car,Clothing,Total Sales\n";
+            activeData.dashboard.forEach(r => { let total = r.accessories + r.car + r.clothing; csv += `${r.country},${r.accessories},${r.car},${r.clothing},${total}\n`; });
+            let gTDash = activeData.dashboardTotals.accessories + activeData.dashboardTotals.car + activeData.dashboardTotals.clothing;
+            csv += `Grand Total,${activeData.dashboardTotals.accessories},${activeData.dashboardTotals.car},${activeData.dashboardTotals.clothing},${gTDash}\n\n`;
+
+            csv += "--- PRODUCT PERFORMANCE ---\nCategory,Revenue,Units Sold,Profit\n";
+            activeData.products.forEach(r => csv += `${r.category},${r.revenue},${r.units},${r.profit}\n`);
+            csv += `Grand Total,${activeData.productsTotals.revenue},${activeData.productsTotals.units},${activeData.productsTotals.profit}\n\n`;
+
+            csv += "--- CHANNEL REPORTS ---\nReport Type,Revenue,Target,Achievement %\n";
+            activeData.reports.forEach(r => csv += `${r.type},${r.revenue},${r.target},${r.achievement}%\n`);
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `Velocity_Motors_Enterprise_Dump_${currentYear}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- DOM population ---
+        function populateTables() {
+            const dbTbody = document.getElementById('dashboard-tbody');
+            dbTbody.innerHTML = ''; 
+            activeData.dashboard.forEach(row => {
+                let total = row.accessories + row.car + row.clothing;
+                dbTbody.innerHTML += `<tr>
+                    <td class="font-medium">${row.country}</td>
+                    <td>${formatCurrency(row.accessories)}</td>
+                    <td>${formatCurrency(row.car)}</td>
+                    <td>${formatCurrency(row.clothing)}</td>
+                    <td class="font-bold text-slate-800 dark:text-white">${formatCurrency(total)}</td>
+                </tr>`;
+            });
+            let grandTotalDashboard = activeData.dashboardTotals.accessories + activeData.dashboardTotals.car + activeData.dashboardTotals.clothing;
+            dbTbody.innerHTML += `<tr class="bg-gray-100 dark:bg-slate-800">
+                <td>${activeData.dashboardTotals.country}</td>
+                <td>${formatCurrency(activeData.dashboardTotals.accessories)}</td>
+                <td>${formatCurrency(activeData.dashboardTotals.car)}</td>
+                <td>${formatCurrency(activeData.dashboardTotals.clothing)}</td>
+                <td class="text-blue-600 dark:text-blue-400">${formatCurrency(grandTotalDashboard)}</td>
+            </tr>`;
+
+            const prTbody = document.getElementById('products-tbody');
+            prTbody.innerHTML = ''; 
+            activeData.products.forEach(row => {
+                prTbody.innerHTML += `<tr>
+                    <td class="font-medium">${row.category}</td>
+                    <td>${formatCurrency(row.revenue)}</td>
+                    <td>${formatNumber(row.units)}</td>
+                    <td class="text-emerald-600 dark:text-emerald-400">${formatCurrency(row.profit)}</td>
+                </tr>`;
+            });
+            prTbody.innerHTML += `<tr class="bg-gray-100 dark:bg-slate-800">
+                <td>${activeData.productsTotals.category}</td>
+                <td>${formatCurrency(activeData.productsTotals.revenue)}</td>
+                <td>${formatNumber(activeData.productsTotals.units)}</td>
+                <td class="text-emerald-600 dark:text-emerald-400">${formatCurrency(activeData.productsTotals.profit)}</td>
+            </tr>`;
+
+            const rpTbody = document.getElementById('reports-tbody');
+            rpTbody.innerHTML = ''; 
+            activeData.reports.forEach(row => {
+                rpTbody.innerHTML += `<tr>
+                    <td class="font-medium">${row.type}</td>
+                    <td>${formatCurrency(row.revenue)}</td>
+                    <td>${formatCurrency(row.target)}</td>
+                    <td>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${row.achievement >= 92 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'}">
+                            ${row.achievement}%
+                        </span>
+                    </td>
+                </tr>`;
+            });
+        }
+
+        // --- Charts ---
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
+        function updateChartsData() {
+            if (window.myCharts.dashboard) {
+                window.myCharts.dashboard.data.datasets[0].data = activeData.dashboard.map(d => d.accessories + d.car + d.clothing);
+                window.myCharts.dashboard.update();
+            }
+            if (window.myCharts.products) {
+                window.myCharts.products.data.datasets[0].data = activeData.products.map(d => d.revenue);
+                window.myCharts.products.data.datasets[1].data = activeData.products.map(d => d.profit);
+                window.myCharts.products.update();
+            }
+            if (window.myCharts.markets) {
+                window.myCharts.markets.data.datasets[0].data = activeData.dashboard.map(d => d.accessories);
+                window.myCharts.markets.data.datasets[1].data = activeData.dashboard.map(d => d.car);
+                window.myCharts.markets.data.datasets[2].data = activeData.dashboard.map(d => d.clothing);
+                window.myCharts.markets.update();
+            }
+            if (window.myCharts.reports) {
+                window.myCharts.reports.data.datasets[0].data = activeData.reports.map(d => d.revenue);
+                window.myCharts.reports.data.datasets[1].data = activeData.reports.map(d => d.target);
+                window.myCharts.reports.update();
+            }
+        }
+        
+        function renderDashboardCharts() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const colors = getChartColors(isDark);
+            Chart.defaults.color = colors.text;
+
+            const ctxPie = document.getElementById('marketSharePieChart').getContext('2d');
+            const countryTotals = activeData.dashboard.map(d => d.accessories + d.car + d.clothing);
+            
+            window.myCharts.dashboard = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: activeData.dashboard.map(d => d.country),
+                    datasets: [{
+                        data: countryTotals,
+                        backgroundColor: ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
+                        borderWidth: 0,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            position: window.innerWidth < 640 ? 'bottom' : 'right', 
+                            labels: { padding: 15, usePointStyle: true, pointStyle: 'circle', boxWidth: 8, font: { size: 10 } } 
+                        } 
+                    },
+                    cutout: '70%',
+                    layout: { padding: window.innerWidth < 640 ? 0 : 10 }
+                }
+            });
+        }
+
+        function renderProductsCharts() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const colors = getChartColors(isDark);
+            
+            const ctx = document.getElementById('productPerformanceChart').getContext('2d');
+            window.myCharts.products = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: activeData.products.map(d => d.category),
+                    datasets: [
+                        { label: 'Revenue', data: activeData.products.map(d => d.revenue), backgroundColor: '#3b82f6', borderRadius: 4 },
+                        { label: 'Profit', data: activeData.products.map(d => d.profit), backgroundColor: '#10b981', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: colors.grid, drawBorder: false }, ticks: { color: colors.text, callback: val => '$' + val/1000 + 'k', font: { size: window.innerWidth < 640 ? 9 : 11 } } },
+                        x: { grid: { display: false }, ticks: { color: colors.text, font: { size: window.innerWidth < 640 ? 9 : 11 } } }
+                    },
+                    plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 12, font: { size: 11 } } } }
+                }
+            });
+        }
+
+        function renderMarketsCharts() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const colors = getChartColors(isDark);
+
+            const ctx = document.getElementById('marketStackedChart').getContext('2d');
+            window.myCharts.markets = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: activeData.dashboard.map(d => d.country),
+                    datasets: [
+                        { label: 'Accessories', data: activeData.dashboard.map(d => d.accessories), backgroundColor: '#10b981' },
+                        { label: 'Car', data: activeData.dashboard.map(d => d.car), backgroundColor: '#3b82f6' },
+                        { label: 'Clothing', data: activeData.dashboard.map(d => d.clothing), backgroundColor: '#f59e0b' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        x: { stacked: true, grid: { display: false }, ticks: { color: colors.text, font: { size: window.innerWidth < 640 ? 9 : 11 } } }, 
+                        y: { stacked: true, grid: { color: colors.grid, drawBorder: false }, ticks: { color: colors.text, callback: val => '$' + val/1000 + 'k', font: { size: window.innerWidth < 640 ? 9 : 11 } } } 
+                    },
+                    plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 12, font: { size: 11 } } } }
+                }
+            });
+        }
+
+        function renderReportsCharts() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const colors = getChartColors(isDark);
+
+            const ctx = document.getElementById('reportsTargetChart').getContext('2d');
+            window.myCharts.reports = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: activeData.reports.map(d => d.type),
+                    datasets: [
+                        { label: 'Achieved Revenue', data: activeData.reports.map(d => d.revenue), backgroundColor: '#4f46e5', borderRadius: 4, order: 2 },
+                        { label: 'Target', type: 'line', data: activeData.reports.map(d => d.target), borderColor: '#f43f5e', borderWidth: window.innerWidth < 640 ? 2 : 3, fill: false, tension: 0.3, pointBackgroundColor: '#f43f5e', pointRadius: window.innerWidth < 640 ? 3 : 4, order: 1 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        y: { grid: { color: colors.grid, drawBorder: false }, ticks: { color: colors.text, callback: val => '$' + val/1000 + 'k', font: { size: window.innerWidth < 640 ? 9 : 11 } } },
+                        x: { grid: { display: false }, ticks: { color: colors.text, font: { size: window.innerWidth < 640 ? 8 : 11 }, maxRotation: 45, minRotation: window.innerWidth < 640 ? 45 : 0 } }
+                    },
+                    plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 12, font: { size: 11 } } } }
+                }
+            });
+        }
+
+        // --- Init & Resize Listeners ---
+        window.onload = () => {
+            populateTables();
+            renderDashboardCharts();
+            const isDark = document.documentElement.classList.contains('dark');
+            if(isDark) updateChartColors(true);
+        };
+
+        // Redraw pie chart legend position on resize
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (window.myCharts.dashboard) {
+                    window.myCharts.dashboard.options.plugins.legend.position = window.innerWidth < 640 ? 'bottom' : 'right';
+                    window.myCharts.dashboard.update();
+                }
+            }, 250);
+        });
+    </script>
+</body>
+</html>
